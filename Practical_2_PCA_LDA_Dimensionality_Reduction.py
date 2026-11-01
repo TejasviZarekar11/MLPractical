@@ -1,94 +1,105 @@
-"""
-Practical 2: Dimensionality Reduction using PCA and LDA
-
-Aim    : Apply PCA and LDA on a high-dimensional dataset and observe the effect of feature reduction on model performance and computational efficiency.
-Dataset: Digits dataset (sklearn, 1797 images, 64 features, 10 classes)
-
-Run    : python Practical_2_PCA_LDA_Dimensionality_Reduction.py
-"""
-
-# ======================================================================
-# Step 1
-# ======================================================================
+# 2 Make use of dimensionality reduction process using PCA and LDA on a suitable open-access high-dimensional dataset and observe the influence of feature reduction on model performance and computational efficiency.
 import time
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
+
+from sklearn.datasets import load_iris
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.svm import SVC
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-X, y = load_digits(return_X_y=True)      # 8x8 pixel images -> 64 features
-print("Dataset shape:", X.shape, "| Classes:", len(np.unique(y)))
+# Load Dataset
+X, y = load_iris(return_X_y=True)
 
+# Split Dataset
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.3, random_state=42, stratify=y)
-sc = StandardScaler()
-X_train = sc.fit_transform(X_train)
-X_test = sc.transform(X_test)
+    X, y, test_size=0.2, random_state=42
+)
 
-# ======================================================================
-# Step 2
-# ======================================================================
-# PCA: how many components keep 95% of the variance?
-pca_full = PCA().fit(X_train)
-cum_var = np.cumsum(pca_full.explained_variance_ratio_)
-n95 = np.argmax(cum_var >= 0.95) + 1
-print("Components needed for 95% variance:", n95)
+# Feature Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-plt.figure(figsize=(7, 3.5))
-plt.plot(range(1, 65), cum_var, marker="o", markersize=3)
-plt.axhline(0.95, color="r", linestyle="--")
-plt.axvline(n95, color="g", linestyle="--")
-plt.xlabel("Number of components")
-plt.ylabel("Cumulative explained variance")
-plt.title("PCA - Explained Variance")
-plt.grid(True)
+# Original Model
+model = LogisticRegression(max_iter=1000)
+
+start = time.time()
+model.fit(X_train, y_train)
+pred = model.predict(X_test)
+original_time = time.time() - start
+
+original_acc = accuracy_score(y_test, pred)
+
+# PCA
+pca = PCA(n_components=2)
+P_train = pca.fit_transform(X_train)
+P_test = pca.transform(X_test)
+
+pca_model = LogisticRegression(max_iter=1000)
+
+start = time.time()
+pca_model.fit(P_train, y_train)
+pca_pred = pca_model.predict(P_test)
+pca_time = time.time() - start
+
+pca_acc = accuracy_score(y_test, pca_pred)
+
+# LDA
+lda = LinearDiscriminantAnalysis(n_components=2)
+L_train = lda.fit_transform(X_train, y_train)
+L_test = lda.transform(X_test)
+
+lda_model = LogisticRegression(max_iter=1000)
+
+start = time.time()
+lda_model.fit(L_train, y_train)
+lda_pred = lda_model.predict(L_test)
+lda_time = time.time() - start
+
+lda_acc = accuracy_score(y_test, lda_pred)
+
+# Compare Results
+results = pd.DataFrame({
+    "Method": ["Original", "PCA", "LDA"],
+    "Accuracy": [
+        original_acc * 100,
+        pca_acc * 100,
+        lda_acc * 100
+    ],
+    "Execution Time": [
+        original_time, pca_time, lda_time
+    ]
+})
+
+print(results)
+
+# Accuracy Comparison Graph
+plt.bar(results["Method"], results["Accuracy"])
+
+plt.xlabel("Method")
+plt.ylabel("Accuracy (%)")
+plt.title("Accuracy Comparison: Original vs PCA vs LDA")
+
 plt.show()
 
-# ======================================================================
-# Step 3
-# ======================================================================
-# Compare model performance and training time
-def evaluate(name, Xtr, Xte):
-    times = []
-    for _ in range(5):                          # repeat 5 times, keep the fastest
-        start = time.perf_counter()
-        model = SVC(kernel="rbf").fit(Xtr, y_train)
-        times.append(time.perf_counter() - start)
-    acc = accuracy_score(y_test, model.predict(Xte))
-    return [name, Xtr.shape[1], round(acc, 4), round(min(times) * 1000, 1)]
+# PCA Visualization
+plt.scatter(P_train[:, 0], P_train[:, 1], c=y_train)
 
-results = [evaluate("Original (no reduction)", X_train, X_test)]
+plt.xlabel("Principal Component 1")
+plt.ylabel("Principal Component 2")
+plt.title("PCA Visualization")
 
-pca = PCA(n_components=n95).fit(X_train)
-results.append(evaluate(f"PCA ({n95} components)",
-                        pca.transform(X_train), pca.transform(X_test)))
+plt.show()
 
-pca10 = PCA(n_components=10).fit(X_train)
-results.append(evaluate("PCA (10 components)",
-                        pca10.transform(X_train), pca10.transform(X_test)))
+# LDA Visualization
+plt.scatter(L_train[:, 0], L_train[:, 1], c=y_train)
 
-lda = LDA(n_components=9).fit(X_train, y_train)    # max = classes - 1 = 9
-results.append(evaluate("LDA (9 components)",
-                        lda.transform(X_train), lda.transform(X_test)))
+plt.xlabel("LD 1")
+plt.ylabel("LD 2")
+plt.title("LDA Visualization")
 
-print(pd.DataFrame(results, columns=["Method", "Features", "Accuracy", "Fit time (ms)"]))
-
-# ======================================================================
-# Step 4
-# ======================================================================
-# Visualise the data in 2-D: PCA (unsupervised) vs LDA (supervised)
-X_pca = PCA(n_components=2).fit_transform(X_train)
-X_lda = LDA(n_components=2).fit_transform(X_train, y_train)
-
-fig, ax = plt.subplots(1, 2, figsize=(10, 4))
-for a, data, title in zip(ax, [X_pca, X_lda], ["PCA - 2 components", "LDA - 2 components"]):
-    sc_ = a.scatter(data[:, 0], data[:, 1], c=y_train, cmap="tab10", s=8)
-    a.set_title(title)
-fig.colorbar(sc_, ax=ax, label="Digit")
 plt.show()
