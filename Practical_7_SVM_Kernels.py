@@ -1,4 +1,7 @@
 # 7 Utilize Support Vector Machine classifiers with linear and nonlinear kernels on a suitable open-access dataset and compare classification performance using appropriate evaluation metrics.
+
+```
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -7,80 +10,145 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 
-# Load dataset
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import f1_score
+from sklearn.metrics import confusion_matrix
+```
+
+Cell 2: Load Dataset
+
+```
 data = load_breast_cancer()
+
 X = data.data
 y = data.target
 
-# Split dataset
+print("Dataset Shape:", X.shape)
+print("Target Classes:", data.target_names)
+```
+
+Explanation: `load_breast_cancer()` loads the dataset. `X` contains input features and `y` contains target classes.
+Cell 3: Split Dataset
+
+```
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# Scale data
+print("Training Data:", X_train.shape)
+print("Testing Data:", X_test.shape)
+```
+
+Cell 4: Feature Scaling
+
+```
 scaler = StandardScaler()
+
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
+```
 
-# Create SVM models
+Important: Feature scaling is necessary for SVM because it uses distances and margins to find the decision boundary.
+Cell 5: Create Linear SVM Model
+
+```
 linear_model = SVC(kernel='linear')
+
+linear_model.fit(X_train, y_train)
+
+linear_pred = linear_model.predict(X_test)
+
+print("Linear SVM Training Completed")
+```
+
+Important line: `kernel='linear'` specifies the Linear kernel.
+Cell 6: Create Nonlinear SVM Model
+
+```
 rbf_model = SVC(kernel='rbf')
 
-# Train models
-linear_model.fit(X_train, y_train)
 rbf_model.fit(X_train, y_train)
 
-# Predictions
-y_pred_linear = linear_model.predict(X_test)
-y_pred_rbf = rbf_model.predict(X_test)
+rbf_pred = rbf_model.predict(X_test)
 
-# Calculate accuracy
-linear_accuracy = accuracy_score(y_test, y_pred_linear)
-rbf_accuracy = accuracy_score(y_test, y_pred_rbf)
+print("RBF SVM Training Completed")
+```
 
-print("Linear SVM Accuracy:", linear_accuracy)
-print("RBF SVM Accuracy:", rbf_accuracy)
+Important line: `kernel='rbf'` specifies the nonlinear Radial Basis Function kernel.
+Cell 7: Evaluate Both Models
 
-# Classification reports
-print("\nLinear SVM Report:")
-print(classification_report(y_test, y_pred_linear))
+```
+results = []
 
-print("\nRBF SVM Report:")
-print(classification_report(y_test, y_pred_rbf))
+models = {
+    "Linear SVM": linear_pred,
+    "RBF SVM": rbf_pred
+}
 
-# Confusion matrices
-cm_linear = confusion_matrix(y_test, y_pred_linear)
-cm_rbf = confusion_matrix(y_test, y_pred_rbf)
+for name, pred in models.items():
 
-plt.figure(figsize=(10, 4))
+    accuracy = accuracy_score(y_test, pred)
+    precision = precision_score(y_test, pred)
+    recall = recall_score(y_test, pred)
+    f1 = f1_score(y_test, pred)
 
-plt.subplot(1, 2, 1)
-sns.heatmap(cm_linear, annot=True, fmt='d', cmap='Blues')
-plt.title("Linear SVM")
+    results.append([
+        name, accuracy, precision, recall, f1
+    ])
+
+result_df = pd.DataFrame(
+    results,
+    columns=[
+        "Model", "Accuracy", "Precision",
+        "Recall", "F1-Score"
+    ]
+)
+
+print(result_df)
+```
+
+Cell 8: Confusion Matrix for Linear SVM
+
+```
+cm1 = confusion_matrix(y_test, linear_pred)
+
+sns.heatmap(cm1, annot=True, fmt='d', cmap='Blues')
+
+plt.title("Linear SVM Confusion Matrix")
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
 
-plt.subplot(1, 2, 2)
-sns.heatmap(cm_rbf, annot=True, fmt='d', cmap='Greens')
-plt.title("RBF SVM")
+plt.show()
+```
+
+Cell 9: Confusion Matrix for RBF SVM
+
+```
+cm2 = confusion_matrix(y_test, rbf_pred)
+
+sns.heatmap(cm2, annot=True, fmt='d', cmap='Greens')
+
+plt.title("RBF SVM Confusion Matrix")
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
 
-plt.tight_layout()
 plt.show()
+```
 
-# Accuracy comparison
-results = pd.DataFrame({
-    "SVM Kernel": ["Linear", "RBF"],
-    "Accuracy": [linear_accuracy, rbf_accuracy]
-})
+Cell 10: Compare Model Performance
 
-print("\nAccuracy Comparison:")
-print(results)
+```
+result_df.set_index("Model").plot(
+    kind="bar",
+    figsize=(9, 5)
+)
 
-sns.barplot(x="SVM Kernel", y="Accuracy", data=results)
-plt.title("Linear vs Nonlinear SVM")
-plt.ylim(0, 1)
+plt.title("Linear SVM vs RBF SVM")
+plt.ylabel("Performance Score")
+plt.ylim(0, 1.1)
+
 plt.show()
+```
