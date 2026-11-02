@@ -2,53 +2,105 @@
 # and scaling numerical attributes on the suitable open access dataset to prepare a clean and model ready dataset
 # for machine learning analysis.
 
-
-# Import libraries
-import numpy as np
+```
 import pandas as pd
+import numpy as np
 
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import StandardScaler
+```
 
-# Create dataset
+Cell 2: Create Dataset
+
+```
 data = {
-    'Age': [20, 21, np.nan, 22, 23, 21],
-    'Marks': [85, 90, 78, np.nan, 69, 84],
-    'Gender': ['Male', 'Male', 'Female', 'Male', 'Female', 'Female'],
-    'City': ['Pune', 'Mumbai', 'Delhi', 'Pune', 'Delhi', 'Mumbai']
+    'Age': [22, 38, np.nan, 35, 28, 45, np.nan, 30],
+    'Fare': [7.25, 71.83, 8.05, np.nan, 13.0, 26.0, 15.5, 20.0],
+    'Gender': ['Male', 'Female', 'Female', 'Male',
+               np.nan, 'Male', 'Female', 'Male'],
+    'Embarked': ['S', 'C', 'S', 'S', 'C',
+                 np.nan, 'S', 'C'],
+    'Survived': [0, 1, 1, 0, 1, 0, 1, 0]
 }
 
-# Create DataFrame
 df = pd.DataFrame(data)
 
-print("Original data:\n", df)
+print("Original Dataset:")
+print(df)
+```
 
-print("\nMissing values:\n", df.isnull().sum())
+Cell 3: Check Missing Values
 
-# Handling missing values
-imputer = SimpleImputer(strategy='mean')
+```
+print("Missing Values:")
+print(df.isnull().sum())
+```
 
-df[['Age', 'Marks']] = imputer.fit_transform(
-    df[['Age', 'Marks']]
+Cell 4: Handle Missing Values
+
+```
+# Numerical columns
+num_cols = ['Age', 'Fare']
+
+# Categorical columns
+cat_cols = ['Gender', 'Embarked']
+
+# Fill numerical missing values with mean
+num_imputer = SimpleImputer(strategy='mean')
+df[num_cols] = num_imputer.fit_transform(df[num_cols])
+
+# Fill categorical missing values with mode
+cat_imputer = SimpleImputer(strategy='most_frequent')
+df[cat_cols] = cat_imputer.fit_transform(df[cat_cols])
+
+print("Dataset After Handling Missing Values:")
+print(df)
+```
+
+Cell 5: Encode Categorical Variables
+
+```
+# One-Hot Encoding
+encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+
+encoded_data = encoder.fit_transform(df[cat_cols])
+
+encoded_df = pd.DataFrame(
+    encoded_data,
+    columns=encoder.get_feature_names_out(cat_cols)
 )
 
-print("\nAfter handling missing values:\n", df)
+# Remove original categorical columns
+df = df.drop(columns=cat_cols)
 
-# Encoding categorical variables
-le = LabelEncoder()
+# Combine encoded columns
+df = pd.concat([df, encoded_df], axis=1)
 
-df['Gender'] = le.fit_transform(df['Gender'])
-df['City'] = le.fit_transform(df['City'])
+print("Dataset After Encoding:")
+print(df)
+```
 
-print("\nAfter Encoding:", df)
+Cell 6: Scale Numerical Attributes
 
-# Scaling numerical attributes (Feature Scaling)
+```
 scaler = StandardScaler()
 
-df[['Age', 'Marks']] = scaler.fit_transform(
-    df[['Age', 'Marks']]
-)
+df[num_cols] = scaler.fit_transform(df[num_cols])
 
-print("\nFinal Clean Dataset:\n", df.round(2))
+print("Dataset After Feature Scaling:")
+print(df)
+```
 
-print("\nMissing values:\n", df.isnull().sum())
+Cell 7: Final Dataset Verification
+
+```
+print("Final Clean Dataset:")
+print(df)
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+print("\nDataset Shape:")
+print(df.shape)
+```
